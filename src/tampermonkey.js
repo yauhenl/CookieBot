@@ -10,7 +10,7 @@
 var code = "(" + (function() {
     var checkReady = setInterval(function() {
         if (typeof Game.ready !== 'undefined' && Game.ready) {
-            Game.LoadMod('https://prinzstani.github.io/CookieBot/cookieAutoPlay.js');
+            Game.LoadMod("https://raw.githubusercontent.com/yauhenl/CookieBot/master/src/bot.js");
             clearInterval(checkReady);
         }
     }, 1000);
