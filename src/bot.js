@@ -15,27 +15,27 @@ AutoPlay.deadline = 0;
 AutoPlay.run = function() {
     if (Game.AscendTimer>0 || Game.ReincarnateTimer>0) return;
     if (AutoPlay.delay>0) { AutoPlay.delay--; return; }
-    if (AutoPlay.nextAchievement==397) { AutoPlay.runJustRight(); return; }
     AutoPlay.now=Date.now();
-    // if high cps then do not wait
+    if (AutoPlay.nextAchievement==397) { AutoPlay.runJustRight(); return; }
+    if (AutoPlay.nightMode()) {
+        AutoPlay.cheatSugarLumps(AutoPlay.now-Game.lumpT);
+        return;
+    }
     if (AutoPlay.now<AutoPlay.deadline) {
         AutoPlay.handleClicking();
         AutoPlay.handleGoldenCookies();
         return;
     }
+    AutoPlay.activities = AutoPlay.mainActivity;
     AutoPlay.deadline = AutoPlay.now+60000; // wait one minute before next step
     AutoPlay.cpsMult = 1;
     for (var i in Game.buffs)
         if (typeof Game.buffs[i].multCpS != 'undefined')
             AutoPlay.cpsMult*=Game.buffs[i].multCpS;
+    // if high cps then do not wait
     if (AutoPlay.cpsMult>100) AutoPlay.setDeadline(0);
-    AutoPlay.activities = AutoPlay.mainActivity;
     if (AutoPlay.plantPending || AutoPlay.harvestPlant)
         AutoPlay.addActivity("Wait with ascend until plants are harvested!");
-    if (AutoPlay.nightMode()) {
-        AutoPlay.cheatSugarLumps(AutoPlay.now-Game.lumpT);
-        return;
-    }
     AutoPlay.handleClicking();
     AutoPlay.handleGoldenCookies();
     AutoPlay.handleBuildings();
@@ -216,7 +216,7 @@ AutoPlay.handleUpgrades = function() {
         if (e.unlocked && !e.bought && e.canBuy() && !AutoPlay.avoidbuy(e))
             e.buy(true);
     });
-    if (Game.lumps>120 && Game.Upgrades["Sugar frenzy"].unlocked &&
+    if (Game.lumps>100 && Game.Upgrades["Sugar frenzy"].unlocked &&
         !Game.Upgrades["Sugar frenzy"].bought &&
         (AutoPlay.now-Game.startDate) > 3*24*60*60*1000)
         Game.Upgrades["Sugar frenzy"].buy();
@@ -284,6 +284,12 @@ AutoPlay.handleBuildings = function() {
 
 //===================== Handle Seasons ==========================
 AutoPlay.handleSeasons = function() {
+    if (Game.Upgrades["A festive hat"].bought &&
+        !Game.Upgrades["Santa's dominion"].unlocked) { // develop santa
+        Game.specialTab = "santa";
+        Game.UpgradeSanta();
+        Game.ToggleSpecialMenu(0);
+    }
     if (!Game.Upgrades["Season switcher"].bought || Game.ascensionMode==1) return;
     if (AutoPlay.seasonFinished(Game.season)) {
         switch (Game.season) {
@@ -294,12 +300,6 @@ AutoPlay.handleSeasons = function() {
         }
     } else if (!(AutoPlay.allUnlocked(AutoPlay.allSeasonUpgrades)))
         AutoPlay.addActivity('Waiting for all results in '+Game.season+'.');
-    if (Game.Upgrades["A festive hat"].bought &&
-        !Game.Upgrades["Santa's dominion"].unlocked) { // develop santa
-        Game.specialTab = "santa";
-        Game.UpgradeSanta();
-        Game.ToggleSpecialMenu(0);
-    }
 }
 
 AutoPlay.valentineUpgrades = range(169,174);
@@ -353,20 +353,23 @@ AutoPlay.handleSugarLumps = function() {
 AutoPlay.cheatSugarLumps = function(age) {
     AutoPlay.cheatLumps = false;
     if (AutoPlay.Config.CheatLumps==0) return;
+    var cheatReduction = 25;
     if (AutoPlay.Config.CheatLumps==1) {
         if (AutoPlay.finished) return;
         if (!AutoPlay.endPhase()) return;
         if (AutoPlay.lumpRelatedAchievements.every(
             function(a) { return Game.AchievementsById[a].won; }))
             return;
+        if (AutoPlay.lumpRelatedAchievements.includes(AutoPlay.nextAchievement))
+            cheatReduction*=25;
     }
-    AutoPlay.cheatLumps = true; // only heavy lump related achievements are missing
+    AutoPlay.cheatLumps = true;
     AutoPlay.addActivity('Cheating sugar lumps.');
     // divide lump ripe time, making days into hours, minutes or seconds
-    var cheatReduction = 25*25;
     if (AutoPlay.Config.CheatLumps==2) cheatReduction = 25;
+    if (AutoPlay.Config.CheatLumps==3) cheatReduction = 25*25;
     if (AutoPlay.Config.CheatLumps==4) {
-        cheatReduction = 25*cheatReduction;
+        cheatReduction = 25*25*25;
         AutoPlay.setDeadline(0);
     }
     var cheatDelay = Game.lumpRipeAge/cheatReduction;
@@ -715,43 +718,43 @@ AutoPlay.seedCalendar = function(game,sector) {
     if (sector==0) AutoPlay.plantCookies = true;
     var doPrint =
         (sector==0) || (sector!=3 && Game.Objects["Farm"].level==sector+6);
-    if (!Game.Upgrades["Wheat slims"].bought &&
+    if (!Game.Upgrades["Wheat slims"].unlocked &&
         game.plants["bakerWheat"].unlocked) {
         AutoPlay.switchSoil(game,sector,'fertilizer');
         if (doPrint) AutoPlay.addActivity("Trying to get Wheat slims.");
         return "bakerWheat";
     }
-    if (!Game.Upgrades["Elderwort biscuits"].bought &&
+    if (!Game.Upgrades["Elderwort biscuits"].unlocked &&
         game.plants["elderwort"].unlocked) {
         AutoPlay.switchSoil(game,sector,'fertilizer');
         if (doPrint) AutoPlay.addActivity("Trying to get Elderwort cookies.");
         return "elderwort";
     }
-    if (!Game.Upgrades["Bakeberry cookies"].bought &&
+    if (!Game.Upgrades["Bakeberry cookies"].unlocked &&
         game.plants["bakeberry"].unlocked) {
         AutoPlay.switchSoil(game,sector,'fertilizer');
         if (doPrint) AutoPlay.addActivity("Trying to get Bakeberry cookies.");
         return "bakeberry";
     }
-    if (!Game.Upgrades["Fern tea"].bought &&
+    if (!Game.Upgrades["Fern tea"].unlocked &&
         game.plants["drowsyfern"].unlocked) {
         AutoPlay.switchSoil(game,sector,'fertilizer');
         if (doPrint) AutoPlay.addActivity("Trying to get Fern tea.");
         return "drowsyfern";
     }
-    if (!Game.Upgrades["Duketater cookies"].bought &&
+    if (!Game.Upgrades["Duketater cookies"].unlocked &&
         game.plants["duketater"].unlocked) {
         AutoPlay.switchSoil(game,sector,'fertilizer');
         if (doPrint) AutoPlay.addActivity("Trying to get Duketater cookies.");
         return "duketater";
     }
-    if (!Game.Upgrades["Green yeast digestives"].bought &&
+    if (!Game.Upgrades["Green yeast digestives"].unlocked &&
         game.plants["greenRot"].unlocked) {
         AutoPlay.switchSoil(game,sector,'fertilizer');
         if (doPrint) AutoPlay.addActivity("Trying to get Green yeast digestives.");
         return "greenRot";
     }
-    if (!Game.Upgrades["Ichor syrup"].bought &&
+    if (!Game.Upgrades["Ichor syrup"].unlocked &&
         game.plants["ichorpuff"].unlocked) {
         AutoPlay.switchSoil(game,sector,'fertilizer');
         if (doPrint) AutoPlay.addActivity("Trying to get Ichor syrup.");
@@ -1001,18 +1004,22 @@ AutoPlay.handleAscend = function() {
     var newPrestige = (Game.prestige+Game.ascendMeterLevel)%1000000;
     if (AutoPlay.grinding() && !Game.Upgrades["Lucky digit"].bought &&
         Game.ascendMeterLevel>0 && ((Game.prestige+Game.ascendMeterLevel)%10 == 7))
-        AutoPlay.doAscend("ascend for lucky digit.",0);
+        AutoPlay.doAscend("ascend for heavenly upgrade lucky digit.",0);
     if (AutoPlay.grinding() && !Game.Upgrades["Lucky number"].bought &&
         Game.ascendMeterLevel>0 && ((Game.prestige+Game.ascendMeterLevel)%1000 == 777))
-        AutoPlay.doAscend("ascend for lucky number.",0);
+        AutoPlay.doAscend("ascend for heavenly upgrade lucky number.",0);
     if (AutoPlay.grinding() && !Game.Upgrades["Lucky payout"].bought &&
         Game.heavenlyChips>77777777) {
         AutoPlay.wantAscend = true; //avoid byuing plants
         AutoPlay.setDeadline(0);
-        AutoPlay.addActivity("Trying to get Lucky Payout.");
+        AutoPlay.addActivity("Trying to get heavenly upgrade Lucky Payout.");
         if (Game.ascendMeterLevel>0 && (newPrestige <= 777777) &&
             (newPrestige+Game.ascendMeterLevel >= 777777))
-            AutoPlay.doAscend("ascend for lucky payout.",0);
+            AutoPlay.doAscend("ascend for heavenly upgrade lucky payout.",0);
+    }
+    if (!Game.Upgrades["Season switcher"].bought &&
+        AutoPlay.nextAchievement==108 && Game.ascendMeterLevel>1111) {
+        AutoPlay.doAscend("getting season switcher.",1);
     }
     if (Game.AchievementsById[AutoPlay.nextAchievement].won) {
         var date = new Date();
@@ -1113,6 +1120,7 @@ AutoPlay.endPhase = function() {
 AutoPlay.grinding = function() { return Game.AchievementsById[373].won; }
 
 AutoPlay.mainActivity = "Doing nothing in particular.";
+AutoPlay.activities = AutoPlay.mainActivity;
 
 AutoPlay.setMainActivity = function(str) {
     AutoPlay.mainActivity = str;
@@ -1146,11 +1154,10 @@ AutoPlay.checkAllAchievementsOK = function() { //We do not stop for one-year leg
     for (var i in Game.Upgrades) {
         var me = Game.Upgrades[i];
         if (me.pool=='prestige' && !me.bought) { // we have not all prestige upgrades yet
-            AutoPlay.nextAchievement =
-                AutoPlay.wantedAchievements[AutoPlay.wantedAchievements.length-1];
+            AutoPlay.nextAchievement = 99; // follow the white rabbit (from dungeons)
             AutoPlay.setMainActivity("Prestige upgrade " + me.name +
                 " is missing, waiting to buy it.");
-            Game.RemoveAchiev(Game.AchievementsById[AutoPlay.nextAchievement].name);
+//	  Game.RemoveAchiev(Game.AchievementsById[AutoPlay.nextAchievement].name);
             return false;
         }
     }
@@ -1277,25 +1284,29 @@ AutoPlay.Disp = {};
 AutoPlay.ConfigPrefix = 'autoplayConfig';
 
 AutoPlay.SaveConfig = function(config) {
-    localStorage.setItem(AutoPlay.ConfigPrefix, JSON.stringify(config));
+    try {
+        window.localStorage.setItem(AutoPlay.ConfigPrefix, JSON.stringify(config));
+    } catch (e) {}
 }
 
 AutoPlay.LoadConfig = function() {
-    if (localStorage.getItem(AutoPlay.ConfigPrefix) != null) {
-        AutoPlay.Config = JSON.parse(localStorage.getItem(AutoPlay.ConfigPrefix));
-        // Check values
-        var mod = false;
-        for (var i in AutoPlay.ConfigDefault) {
-            if (typeof AutoPlay.Config[i]==='undefined' || AutoPlay.Config[i]<0 ||
-                AutoPlay.Config[i]>=AutoPlay.ConfigData[i].label.length) {
-                mod = true;
-                AutoPlay.Config[i] = AutoPlay.ConfigDefault[i];
+    try {
+        if (window.localStorage.getItem(AutoPlay.ConfigPrefix) != null) {
+            AutoPlay.Config = JSON.parse(window.localStorage.getItem(AutoPlay.ConfigPrefix));
+            // Check values
+            var mod = false;
+            for (var i in AutoPlay.ConfigDefault) {
+                if (typeof AutoPlay.Config[i]==='undefined' || AutoPlay.Config[i]<0 ||
+                    AutoPlay.Config[i]>=AutoPlay.ConfigData[i].label.length) {
+                    mod = true;
+                    AutoPlay.Config[i] = AutoPlay.ConfigDefault[i];
+                }
             }
+            if (mod) AutoPlay.SaveConfig(AutoPlay.Config);
+        } else { // Default values
+            AutoPlay.RestoreDefault();
         }
-        if (mod) AutoPlay.SaveConfig(AutoPlay.Config);
-    } else { // Default values
-        AutoPlay.RestoreDefault();
-    }
+    } catch (e) {}
 }
 
 AutoPlay.RestoreDefault = function() {
@@ -1406,25 +1417,34 @@ AutoPlay.setDeadline = function(d) {
 }
 
 AutoPlay.logging = function() {
-    var before = window.localStorage.getItem("autoplayLog");
-    var toAdd = "#logging autoplay V" + AutoPlay.version + " with " +
-        AutoPlay.loggingInfo + "\n" + Game.WriteSave(1) + "\n";
-    AutoPlay.loggingInfo = 0;
-    window.localStorage.setItem("autoplayLog",before+toAdd);
+    if(!AutoPlay.loggingInfo) return;
+    try {
+        var before = window.localStorage.getItem("autoplayLog");
+        var toAdd = "#logging autoplay V" + AutoPlay.version + " with " +
+            AutoPlay.loggingInfo + "\n" + Game.WriteSave(1) + "\n";
+        AutoPlay.loggingInfo = 0;
+        window.localStorage.setItem("autoplayLog",before+toAdd);
+    } catch (e) {}
 }
 
 AutoPlay.cleanLog = function() {
-    window.localStorage.setItem("autoplayLog","");
+    try {
+        window.localStorage.setItem("autoplayLog","");
+    } catch (e) {}
 }
 
 AutoPlay.showLog = function() {
+    var theLog="";
+    try {
+        theLog=window.localStorage.getItem("autoplayLog");
+    } catch (e) { theLog=""; }
     var str=
         Game.Prompt('<h3>Cookie Bot Log</h3><div class="block">'+
             'This is the log of the bot with saves at important stages.<br>'+
             'Copy it and use it as you like.</div>'+
             '<div class="block"><textarea id="textareaPrompt" '+
             'style="width:100%;height:128px;" readonly>'+
-            window.localStorage.getItem("autoplayLog")+'</textarea></div>',
+            theLog+'</textarea></div>',
             ['All done!']);
 }
 
